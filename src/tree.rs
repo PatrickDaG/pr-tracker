@@ -39,6 +39,18 @@ impl Tree {
             children: nexts,
         }
     }
+    pub fn collect_branches(&self, vec: &mut Vec<String>) -> bool {
+        let mut res = false;
+        if let Some(true) = self.accepted {
+            vec.push(self.branch_name.clone());
+        } else {
+            res = true
+        }
+        for c in &self.children {
+            res |= c.collect_branches(vec);
+        }
+        res
+    }
 
     fn fill_accepted(&mut self, branches: &BTreeSet<OsString>, missing_means_absent: bool) {
         self.accepted = match branches.contains(OsStr::new(&self.branch_name)) {

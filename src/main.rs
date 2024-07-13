@@ -23,6 +23,7 @@ use futures_util::future::join_all;
 use http_types::mime;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
+use serde_json::json;
 use structopt::StructOpt;
 use tide::{Request, Response};
 
@@ -71,8 +72,10 @@ static GITHUB_TOKEN: Lazy<OsString> = Lazy::new(|| {
 struct PageTemplate {
     error: Option<String>,
     pr_number: Option<String>,
+    email: Option<String>,
     pr_title: Option<String>,
     closed: bool,
+    subscribed: bool,
     tree: Option<Tree>,
     source_url: String,
 }
@@ -80,14 +83,10 @@ struct PageTemplate {
 #[derive(Debug, Deserialize)]
 struct Query {
     pr: Option<String>,
+    email: Option<String>,
 }
 
-async fn track_pr(pr_number: Option<String>, status: &mut u16, page: &mut PageTemplate) {
-    let pr_number = match pr_number {
-        Some(pr_number) => pr_number,
-        None => return,
-    };
-
+async fn track_pr(pr_number: String, status: &mut u16, page: &mut PageTemplate) {
     let pr_number_i64 = match pr_number.parse() {
         Ok(n) => n,
         Err(_) => {
@@ -146,8 +145,30 @@ async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> 
     };
 
     let pr_number = request.query::<Query>()?.pr;
+    let email = request.query::<Query>()?.email;
+    page.email = email.clone();
 
-    track_pr(pr_number, &mut status, &mut page).await;
+    match pr_number.clone() {
+        Some(pr_number) => track_pr(pr_number, &mut status, &mut page).await,
+        None => {}
+    };
+    match email {
+        Some(email) => {
+            if let Some(ref tree) = page.tree {
+                let mut v = Vec::new();
+                let remaining = tree.collect_branches(&mut v);
+                if !remaining {
+                    page.error = Some("There are no branches remaining to be tracked".to_string())
+                } else {
+                    page.subscribed = true;
+                    let folder = format!("data/{}", pr_number.unwrap());
+                    std::fs::create_dir_all(folder.clone())?;
+                    std::fs::write(format!("{folder}/{email}"), json!(v).to_string())?;
+                }
+            }
+        }
+        None => {}
+    }
 
     Ok(Response::builder(status)
         .content_type(mime::HTML)
