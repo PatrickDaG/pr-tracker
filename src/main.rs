@@ -53,18 +53,24 @@ struct Config {
 static CONFIG: Lazy<Config> = Lazy::new(Config::from_args);
 
 static GITHUB_TOKEN: Lazy<OsString> = Lazy::new(|| {
+    use std::env;
     use std::io::{stdin, BufRead, BufReader};
     use std::os::unix::prelude::*;
 
-    let mut bytes = Vec::with_capacity(41);
-    if let Err(e) = BufReader::new(stdin()).read_until(b'\n', &mut bytes) {
-        eprintln!("pr-tracker: read: {}", e);
-        exit(74)
+    match env::var_os("PR_TRACKER_GITHUB_TOKEN") {
+        Some(token) => token,
+        None => {
+            let mut bytes = Vec::with_capacity(41);
+            if let Err(e) = BufReader::new(stdin()).read_until(b'\n', &mut bytes) {
+                eprintln!("pr-tracker: read: {}", e);
+                exit(74)
+            }
+            if bytes.last() == Some(&b'\n') {
+                bytes.pop();
+            }
+            OsString::from_vec(bytes)
+        }
     }
-    if bytes.last() == Some(&b'\n') {
-        bytes.pop();
-    }
-    OsString::from_vec(bytes)
 });
 
 #[derive(Debug, Default, Template)]
