@@ -8,11 +8,14 @@ mod nixpkgs;
 mod systemd;
 mod tree;
 
-use std::ffi::OsString;
+use std::collections::HashSet;
+use std::fs::{remove_dir_all, File};
+use std::io::BufReader;
 use std::path::PathBuf;
+use std::{ffi::OsString, fs::read_dir};
 
 use askama::Template;
-use async_std::io;
+use async_std::io::{self};
 use async_std::net::TcpListener;
 use async_std::os::unix::io::FromRawFd;
 use async_std::os::unix::net::UnixListener;
@@ -22,6 +25,7 @@ use async_std::process::exit;
 use futures_util::future::join_all;
 use http_types::mime;
 use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;
 use structopt::StructOpt;
@@ -48,6 +52,9 @@ struct Config {
 
     #[structopt(long, default_value = "/")]
     mount: String,
+
+    #[structopt(long, default_value = "data")]
+    data_folder: String,
 }
 
 static CONFIG: Lazy<Config> = Lazy::new(Config::from_args);
@@ -142,6 +149,53 @@ async fn track_pr(pr_number: String, status: &mut u16, page: &mut PageTemplate) 
 
     page.tree = Some(tree);
 }
+async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Response> {
+    let mut status = 200;
+    let mut page = PageTemplate {
+        source_url: CONFIG.source_url.clone(),
+        ..Default::default()
+    };
+
+    let re_pull = Regex::new(r"^[0-9]*$")?;
+    let re_mail = Regex::new(
+        r#"^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$"#,
+    )?;
+    for f in read_dir(CONFIG.data_folder.clone())? {
+        let dir_path = f?.path();
+        let dir_name = dir_path.file_name().and_then(|x| x.to_str()).unwrap();
+        if dir_path.is_dir() && re_pull.is_match(dir_name) {
+            track_pr(dir_name.to_string(), &mut status, &mut page).await;
+            println!("Pruning pr number {dir_name}");
+            if let Some(ref tree) = page.tree {
+                let mut v = Vec::new();
+                let remaining = tree.collect_branches(&mut v);
+                let current: HashSet<String> = v.into_iter().collect();
+                println!("the pr is merged in: {:#?}", current);
+                for f in read_dir(dir_path.clone())? {
+                    let file_path = f?.path();
+                    let file_name = file_path.file_name().and_then(|x| x.to_str()).unwrap();
+                    if file_path.is_file() && re_mail.is_match(file_name) {
+                        println!("{} has received notifications for:", file_name);
+                        let file = File::open(file_path)?;
+                        let reader = BufReader::new(file);
+                        let val: HashSet<String> = serde_json::from_reader(reader)?;
+                        println!("{:#?}", val);
+                        let to_do = &current - &val;
+                        println!("You will be notified for: {:#?}", to_do);
+                    }
+                }
+                if !remaining {
+                    println!("Removing {}", dir_name);
+                    remove_dir_all(dir_path)?;
+                }
+            }
+        }
+    }
+    Ok(Response::builder(200)
+        .content_type(mime::HTML)
+        .body("Sucess")
+        .build())
+}
 
 async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> {
     let mut status = 200;
@@ -167,7 +221,7 @@ async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> 
                     page.error = Some("There are no branches remaining to be tracked".to_string())
                 } else {
                     page.subscribed = true;
-                    let folder = format!("data/{}", pr_number.unwrap());
+                    let folder = format!("{}/{}", CONFIG.data_folder, pr_number.unwrap());
                     std::fs::create_dir_all(folder.clone())?;
                     std::fs::write(format!("{folder}/{email}"), json!(v).to_string())?;
                 }
@@ -205,6 +259,7 @@ async fn main() {
     let mut root = server.at(&CONFIG.mount);
 
     root.at("/").get(handle_request);
+    root.at("update").get(update_subscribers);
 
     let fd_count = handle_error(listen_fds(true), 71, "sd_listen_fds");
 
