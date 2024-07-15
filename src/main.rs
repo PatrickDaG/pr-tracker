@@ -4,6 +4,7 @@
 
 mod branches;
 mod github;
+mod mail;
 mod nixpkgs;
 mod systemd;
 mod tree;
@@ -32,6 +33,7 @@ use structopt::StructOpt;
 use tide::{Request, Response};
 
 use github::{GitHub, PullRequestStatus};
+use mail::send_notification;
 use nixpkgs::Nixpkgs;
 use systemd::{is_socket_inet, is_socket_unix, listen_fds};
 use tree::Tree;
@@ -173,8 +175,12 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                 println!("the pr is merged in: {:#?}", current);
                 for f in read_dir(dir_path.clone())? {
                     let file_path = f?.path();
-                    let file_name = file_path.file_name().and_then(|x| x.to_str()).unwrap();
-                    if file_path.is_file() && re_mail.is_match(file_name) {
+                    let file_name = file_path
+                        .file_name()
+                        .and_then(|x| x.to_str())
+                        .unwrap()
+                        .to_owned();
+                    if file_path.is_file() && re_mail.is_match(&file_name) {
                         println!("{} has received notifications for:", file_name);
                         let file = File::open(file_path)?;
                         let reader = BufReader::new(file);
@@ -182,6 +188,13 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                         println!("{:#?}", val);
                         let to_do = &current - &val;
                         println!("You will be notified for: {:#?}", to_do);
+                        let _ = send_notification(
+                            &file_name,
+                            &to_do,
+                            page.pr_number.as_ref().unwrap(),
+                            page.pr_title.as_ref().unwrap(),
+                            !remaining,
+                        );
                     }
                 }
                 if !remaining {
