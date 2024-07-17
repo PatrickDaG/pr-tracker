@@ -65,6 +65,17 @@ struct Config {
 
 static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
 
+static WHITE_LIST: Lazy<HashSet<String>> = Lazy::new(|| {
+    use std::io::{BufRead, BufReader};
+    match &CONFIG.email_white_list {
+        Some(str) => {
+            let reader = BufReader::new(File::open(str).unwrap());
+            reader.lines().map(|line| line.unwrap()).collect()
+        }
+        _ => HashSet::new(),
+    }
+});
+
 static GITHUB_TOKEN: Lazy<OsString> = Lazy::new(|| {
     use std::env;
     use std::io::{stdin, BufRead, BufReader};
@@ -236,6 +247,8 @@ async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> 
                 let remaining = tree.collect_branches(&mut v);
                 if !remaining {
                     page.error = Some("There are no branches remaining to be tracked".to_string())
+                } else if !WHITE_LIST.is_empty() && !WHITE_LIST.contains(&email) {
+                    page.error = Some("You are not part of the white list.".to_string())
                 } else {
                     page.subscribed = true;
                     let folder = format!("{}/{}", CONFIG.data_folder, pr_number.unwrap());
