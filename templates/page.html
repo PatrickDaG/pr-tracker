@@ -170,7 +170,7 @@
 		<h1>Nixpkgs Pull Request Tracker</h1>
 
 		{%- if subscribed -%}
-		<div class="state-subscribed">You will be notified be by mail when this PR reaches a new ???</div>
+		<div class="state-subscribed">You will be notified be by mail when this PR reaches a new branch</div>
 		{%- endif -%}
 		<form>
 			<label for="pr">PR number: </label>
@@ -179,6 +179,8 @@
                       {{- pr_number -}}
                       {%- else -%}
                       {%- endmatch -%}">
+			{% match pr_number %}
+			{%- when Some with (pr_number) -%}
 			<br>
 			<label for="email">Email: </label>
 			<input id="email" name="email" type="email" value="{%- match email -%}
@@ -187,7 +189,10 @@
                       {%- else -%}
                       {%- endmatch -%}">
 			<br>
+			<button type="submit">Subscribe</button>
+			{%- else -%}
 			<button type="submit">Track</button>
+			{% endmatch %}
 		</form>
 	</header>
 

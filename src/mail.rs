@@ -16,7 +16,8 @@ pub fn send_notification(
 ) -> Result<()> {
     let mut body = format!(
         "This is your friendly neighbourhood pr-tracker.\n\
-        PR Number {pr_number} titled: \"{pr_title}\" has reached:\n\
+        PR <a href=\"https://github.com/NixOS/nixpkgs/pull/{{ pr_number }}\">#{pr_number}</a>\
+        (\"{pr_title}\") has reached:\n\
         {:#?}\n",
         branches
     );
