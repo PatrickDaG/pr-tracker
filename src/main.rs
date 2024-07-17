@@ -23,13 +23,13 @@ use async_std::os::unix::net::UnixListener;
 use async_std::pin::Pin;
 use async_std::prelude::*;
 use async_std::process::exit;
+use clap::Parser;
 use futures_util::future::join_all;
 use http_types::mime;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;
-use structopt::StructOpt;
 use tide::{Request, Response};
 
 use github::{GitHub, PullRequestStatus};
@@ -38,28 +38,32 @@ use nixpkgs::Nixpkgs;
 use systemd::{is_socket_inet, is_socket_unix, listen_fds};
 use tree::Tree;
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 struct Config {
-    #[structopt(long, parse(from_os_str))]
+    #[arg(long)]
     path: PathBuf,
 
-    #[structopt(long, parse(from_os_str))]
+    #[arg(long)]
     remote: PathBuf,
 
-    #[structopt(long, parse(from_os_str))]
+    #[arg(long)]
     user_agent: OsString,
 
-    #[structopt(long)]
+    #[arg(long)]
     source_url: String,
 
-    #[structopt(long, default_value = "/")]
+    #[arg(long, default_value = "/")]
     mount: String,
 
-    #[structopt(long, default_value = "data")]
+    #[arg(long, default_value = "data")]
     data_folder: String,
+
+    #[arg(long)]
+    email_white_list: Option<PathBuf>,
 }
 
-static CONFIG: Lazy<Config> = Lazy::new(Config::from_args);
+static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
 
 static GITHUB_TOKEN: Lazy<OsString> = Lazy::new(|| {
     use std::env;
