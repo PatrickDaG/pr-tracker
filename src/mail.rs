@@ -6,6 +6,9 @@ use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use std::env;
+use urlencoding::encode;
+
+use crate::CONFIG;
 
 pub fn send_notification(
     recipient: &str,
@@ -25,6 +28,12 @@ pub fn send_notification(
         body += "This is the last update you will get for this pr.\n\
         Thx for using this service\n\
         Goodbye";
+    } else {
+        body += &format!(
+            "<a href=\"{}/unsubscribe?pr={pr_number}&email={}\">Unsubscribe from this PR</a>",
+            &CONFIG.url,
+            encode(recipient)
+        );
     }
     let sending_address = env::var("PR_TRACKER_MAIL_ADDRESS")?;
     let sending_user = match env::var("PR_TRACKER_MAIL_USER") {

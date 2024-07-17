@@ -10,7 +10,7 @@ mod systemd;
 mod tree;
 
 use std::collections::HashSet;
-use std::fs::{remove_dir_all, File};
+use std::fs::{remove_dir_all, remove_file, File};
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::{ffi::OsString, fs::read_dir};
@@ -40,7 +40,7 @@ use tree::Tree;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-struct Config {
+pub struct Config {
     #[arg(long)]
     path: PathBuf,
 
@@ -61,9 +61,12 @@ struct Config {
 
     #[arg(long)]
     email_white_list: Option<PathBuf>,
+
+    #[arg(long)]
+    url: String,
 }
 
-static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
+pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
 
 static WHITE_LIST: Lazy<HashSet<String>> = Lazy::new(|| {
     use std::io::{BufRead, BufReader};
@@ -225,6 +228,31 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
         .build())
 }
 
+async fn unsubscribe<S>(request: Request<S>) -> http_types::Result<Response> {
+    let pr_number = request.query::<Query>()?.pr;
+    let email = request.query::<Query>()?.email;
+
+    if let Some(email) = email {
+        for f in read_dir(CONFIG.data_folder.clone())? {
+            let dir_path = f?.path();
+            let dir_name = dir_path.file_name().and_then(|x| x.to_str()).unwrap();
+            if dir_path.is_dir()
+                && (pr_number.is_none() || pr_number.as_ref().is_some_and(|x| x == dir_name))
+            {
+                match remove_file(dir_path.join(&email)) {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
+            }
+        }
+    }
+
+    Ok(Response::builder(200)
+        .content_type(mime::HTML)
+        .body("")
+        .build())
+}
+
 async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> {
     let mut status = 200;
     let mut page = PageTemplate {
@@ -290,6 +318,7 @@ async fn main() {
 
     root.at("/").get(handle_request);
     root.at("update").get(update_subscribers);
+    root.at("unsubscribe").get(unsubscribe);
 
     let fd_count = handle_error(listen_fds(true), 71, "sd_listen_fds");
 
