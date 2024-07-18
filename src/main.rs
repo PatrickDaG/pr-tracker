@@ -50,9 +50,6 @@ pub struct Config {
     #[arg(long)]
     user_agent: OsString,
 
-    #[arg(long)]
-    source_url: String,
-
     #[arg(long, default_value = "/")]
     mount: String,
 
@@ -110,7 +107,6 @@ struct PageTemplate {
     closed: bool,
     subscribed: bool,
     tree: Option<Tree>,
-    source_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -172,7 +168,6 @@ async fn track_pr(pr_number: String, status: &mut u16, page: &mut PageTemplate) 
 async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Response> {
     let mut status = 200;
     let mut page = PageTemplate {
-        source_url: CONFIG.source_url.clone(),
         ..Default::default()
     };
 
@@ -256,7 +251,6 @@ async fn unsubscribe<S>(request: Request<S>) -> http_types::Result<Response> {
 async fn handle_request<S>(request: Request<S>) -> http_types::Result<Response> {
     let mut status = 200;
     let mut page = PageTemplate {
-        source_url: CONFIG.source_url.clone(),
         ..Default::default()
     };
 

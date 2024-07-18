@@ -31,9 +31,8 @@ Usage
 
 The program must be supplied with a local checkout of the monitored
 git repository, the remote name in the repository corresponding to
-upstream Nixpkgs, a User-Agent string to use when contacting the
-GitHub API, and a URL where users can download the program's source
-code.  Optionally, a "mount" path can be specified, which will be
+upstream Nixpkgs and a User-Agent string to use when contacting the
+GitHub API. Optionally, a "mount" path can be specified, which will be
 prefixed to all of the server's routes, so that it can be served at a
 non-root HTTP path.
 
@@ -43,7 +42,6 @@ For example:
 		--path /var/lib/nixpkgs.git \
 		--remote nixpkgs \
 		--user-agent 'pr-tracker (alyssais)' \
-		--source-url https://example.com/pr-tracker.tar.gz \
 		--mount pr-tracker
 
 Additionally, a GitHub API token should be supplied on pr-tracker's
