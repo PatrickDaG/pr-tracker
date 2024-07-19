@@ -201,13 +201,15 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                         println!("{:#?}", val);
                         let to_do = &current - &val;
                         println!("They will be notified for: {:#?}", to_do);
-                        send_notification(
-                            &file_name,
-                            &to_do,
-                            page.pr_number.as_ref().unwrap(),
-                            page.pr_title.as_ref().unwrap(),
-                            !remaining,
-                        )?;
+                        if !to_do.is_empty() {
+                            send_notification(
+                                &file_name,
+                                &to_do,
+                                page.pr_number.as_ref().unwrap(),
+                                page.pr_title.as_ref().unwrap(),
+                                !remaining,
+                            )?;
+                        }
                     }
                 }
                 if !remaining {

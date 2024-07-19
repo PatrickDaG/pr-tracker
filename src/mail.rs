@@ -56,7 +56,7 @@ pub fn send_notification(
             "PR-tracker: {pr_number}: {pr_title} has reached {:?}",
             branches
         ))
-        .header(ContentType::TEXT_PLAIN)
+        .header(ContentType::TEXT_HTML)
         .body(body)
         .unwrap();
 
