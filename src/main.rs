@@ -11,7 +11,6 @@ mod tree;
 
 use std::collections::HashSet;
 use std::fs::{remove_dir_all, remove_file, File};
-use std::io::BufReader;
 use std::path::PathBuf;
 use std::{ffi::OsString, fs::read_dir};
 
@@ -195,9 +194,8 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                         .to_owned();
                     if file_path.is_file() && re_mail.is_match(&file_name) {
                         println!("{} has received notifications for:", file_name);
-                        let file = File::open(file_path)?;
-                        let reader = BufReader::new(file);
-                        let val: HashSet<String> = serde_json::from_reader(reader)?;
+                        let str = std::fs::read(file_path.clone())?;
+                        let val: HashSet<String> = serde_json::from_slice(&str)?;
                         println!("{:#?}", val);
                         let to_do = &current - &val;
                         println!("They will be notified for: {:#?}", to_do);
@@ -209,6 +207,7 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                                 page.pr_title.as_ref().unwrap(),
                                 !remaining,
                             )?;
+                            std::fs::write(file_path, json!(current).to_string())?;
                         }
                     }
                 }
