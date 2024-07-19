@@ -18,19 +18,19 @@ pub fn send_notification(
     last: bool,
 ) -> Result<()> {
     let mut body = format!(
-        "This is your friendly neighbourhood pr-tracker.\n\
-        PR <a href=\"https://github.com/NixOS/nixpkgs/pull/{{ pr_number }}\">#{pr_number}</a>\
-        (\"{pr_title}\") has reached:\n\
-        {:#?}\n",
+        "This is your friendly neighbourhood pr-tracker.<br>
+        PR <a href=\"https://github.com/NixOS/nixpkgs/pull/{pr_number}\">#{pr_number}</a>\
+        (\"{pr_title}\") has reached:<br>
+        {:#?}<br>",
         branches
     );
     if last {
-        body += "This is the last update you will get for this pr.\n\
-        Thx for using this service\n\
+        body += "This is the last update you will get for this pr.<br>\
+        Thx for using this service<br>\
         Goodbye";
     } else {
         body += &format!(
-            "<a href=\"{}/unsubscribe?pr={pr_number}&email={}\">Unsubscribe from this PR</a>\n",
+            "<a href=\"{}/unsubscribe?pr={pr_number}&email={}\">Unsubscribe from this PR</a><br>",
             &CONFIG.url,
             encode(recipient)
         );
