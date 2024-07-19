@@ -200,14 +200,14 @@ async fn update_subscribers<S>(_request: Request<S>) -> http_types::Result<Respo
                         let val: HashSet<String> = serde_json::from_reader(reader)?;
                         println!("{:#?}", val);
                         let to_do = &current - &val;
-                        println!("You will be notified for: {:#?}", to_do);
-                        let _ = send_notification(
+                        println!("They will be notified for: {:#?}", to_do);
+                        send_notification(
                             &file_name,
                             &to_do,
                             page.pr_number.as_ref().unwrap(),
                             page.pr_title.as_ref().unwrap(),
                             !remaining,
-                        );
+                        )?;
                     }
                 }
                 if !remaining {
