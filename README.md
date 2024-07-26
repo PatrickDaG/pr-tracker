@@ -1,9 +1,6 @@
-pr-tracker
-==========
-
 Run a web server that displays the path a Nixpkgs pull request will
 take through the various release channels.  An instance is available
-at the time of writing at <https://nixpk.gs/pr-tracker.html>.
+at the time of writing at <https://tracker.lel.lol/>.
 
 
 Installation
@@ -21,31 +18,25 @@ Other build dependencies:
 Other runtime dependencies:
  - Git
 
-In most cases, installation should be as simple as
+In most cases, building should be as simple as
 
-	make install
+	cargo run
 
 
 Usage
 -----
 
-The program must be supplied with a local checkout of the monitored
-git repository, the remote name in the repository corresponding to
-upstream Nixpkgs and a User-Agent string to use when contacting the
-GitHub API. Optionally, a "mount" path can be specified, which will be
-prefixed to all of the server's routes, so that it can be served at a
-non-root HTTP path.
+To see usage run:
 
-For example:
+```sh
+./pr-tracker --help
+```
 
-	pr-tracker \
-		--path /var/lib/nixpkgs.git \
-		--remote nixpkgs \
-		--user-agent 'pr-tracker (alyssais)' \
-		--mount pr-tracker
-
-Additionally, a GitHub API token should be supplied on pr-tracker's
-standard input.
+The following environment variables are expected:
+| Name  | Usage  |
+|---|---|
+|PR_TRACKER_GITHUB_TOKEN   | A github access token to access the github graphql api.  |
+|PR_TRACKER_MAIL_PASSWD   | The password to use for secure email sending.  |
 
 pr-tracker expects the socket(s) for it to listen on to be set up for
 it by a service supervisor, using the systemd socket activation
@@ -57,21 +48,16 @@ outside of a systemd unit, you can use systemd-socket-activate:
 Further information on available command line arguments can be
 obtained with
 
-	pr-tracker --help
+Scripts
+-----
 
+`scripts/` contains tampermonkey scripts to add buttons directly to github for tracking/subscribing to pull-requests.
 
 Development
 -----------
 
 The upstream git repository for pr-tracker is available at
-<https://git.qyliss.net/pr-tracker/>.
-
-Bugs and patches can be sent to the author,
-Alyssa Ross <hi@alyssa.is>.
-
-For information about how to use git to send a patch email, see
-<https://git-send-email.io/>.
-
+<https://github.com/patrickdag/pr-tracker/>.
 
 License
 -------

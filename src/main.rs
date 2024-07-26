@@ -40,26 +40,49 @@ use tree::Tree;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
+    /// The URL under which the site is hosted.
+    /// Used to generate unsubscribe links and such.
+    #[arg(long)]
+    url: String,
+
+    /// The path to the local checkout of nixpkgs.
     #[arg(long)]
     path: PathBuf,
 
+    /// The git remote corresponding to upstream nixpkgs
     #[arg(long)]
     remote: PathBuf,
 
+    /// The user agent to use when accessing the github API.
     #[arg(long)]
     user_agent: OsString,
 
+    /// Optional mountpoint if the webserver is not running at the root.
     #[arg(long, default_value = "/")]
     mount: String,
 
+    /// Folder to save the subscription data into.
     #[arg(long, default_value = "data")]
     data_folder: String,
 
+    /// The email sender to use when sending notification.
+    #[arg(long)]
+    email_address: String,
+
+    /// The user used for authorizing the email sending.
+    /// Defaults to the sending address.
+    #[arg(long)]
+    email_user: Option<String>,
+
+    /// The mail server to use for sending.
+    #[arg(long)]
+    email_server: String,
+
+    /// A whitelist of allowed emails to subscribet.
+    /// No list or an empty list disables the whitelisting, to blacklist all mails
+    /// supply a whitelist containing an invalid email.
     #[arg(long)]
     email_white_list: Option<PathBuf>,
-
-    #[arg(long)]
-    url: String,
 }
 
 pub static CONFIG: Lazy<Config> = Lazy::new(Config::parse);
@@ -77,23 +100,8 @@ static WHITE_LIST: Lazy<HashSet<String>> = Lazy::new(|| {
 
 static GITHUB_TOKEN: Lazy<OsString> = Lazy::new(|| {
     use std::env;
-    use std::io::{stdin, BufRead, BufReader};
-    use std::os::unix::prelude::*;
 
-    match env::var_os("PR_TRACKER_GITHUB_TOKEN") {
-        Some(token) => token,
-        None => {
-            let mut bytes = Vec::with_capacity(41);
-            if let Err(e) = BufReader::new(stdin()).read_until(b'\n', &mut bytes) {
-                eprintln!("pr-tracker: read: {}", e);
-                exit(74)
-            }
-            if bytes.last() == Some(&b'\n') {
-                bytes.pop();
-            }
-            OsString::from_vec(bytes)
-        }
-    }
+    env::var_os("PR_TRACKER_GITHUB_TOKEN").unwrap()
 });
 
 #[derive(Debug, Default, Template)]

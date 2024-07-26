@@ -3,8 +3,8 @@
 
 [package]
 name = "pr-tracker"
-version = "1.2.0"
-authors = ["Alyssa Ross <hi@alyssa.is>"]
+version = "1.5.0"
+authors = ["Patrick <patrick@failmail.dev>"]
 edition = "2021"
 license = "AGPL-3.0-or-later WITH GPL-3.0-linking-exception"
 

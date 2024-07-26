@@ -40,14 +40,14 @@ pub fn send_notification(
             encode(recipient)
         );
     }
-    let sending_address = env::var("PR_TRACKER_MAIL_ADDRESS").unwrap();
-    let sending_user = match env::var("PR_TRACKER_MAIL_USER") {
-        Ok(address) => address,
-        _ => sending_address.clone(),
+    let sending_address = &CONFIG.email_address;
+    let sending_user = match &CONFIG.email_user {
+        Some(address) => address,
+        _ => &sending_address,
     };
-    let sending_passwd = env::var("PR_TRACKER_MAIL_PASSWD").unwrap();
+    let sending_passwd = env::var("PR_TRACKER_MAIL_PASSWD")?;
 
-    let sending_server = env::var("PR_TRACKER_MAIL_SERVER").unwrap();
+    let sending_server = CONFIG.email_server.as_ref();
 
     let email = Message::builder()
         .from(format!("PR-Tracker <{}>", sending_address).parse().unwrap())
